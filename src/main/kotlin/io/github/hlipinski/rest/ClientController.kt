@@ -1,5 +1,6 @@
 package io.github.hlipinski.rest
 
+import io.github.resilience4j.circuitbreaker.CallNotPermittedException
 import io.github.resilience4j.circuitbreaker.CircuitBreaker
 import io.github.resilience4j.decorators.Decorators
 import org.slf4j.Logger
@@ -25,11 +26,14 @@ class ClientController(
         val decoratedSupplier: Supplier<String?> =
             Decorators.ofSupplier { simpleAppClient.get503() }
                 .withCircuitBreaker(circuitBreaker)
+                .withFallback(listOf(CallNotPermittedException::class.java)) { "Hello from fallback!" }
                 .decorate()
 
         kotlin.runCatching { decoratedSupplier.get() }
             .onSuccess { return ResponseEntity.ok(it) }
-            .onFailure { logger.error(it.message) }
+            .onFailure { logger.error("${it.javaClass} ${it.message}") }
+
+        logger.info(">>>>>>>>>>>> CircuitBreaker state: ${circuitBreaker.state}")
 
         return ResponseEntity.noContent().build()
     }
