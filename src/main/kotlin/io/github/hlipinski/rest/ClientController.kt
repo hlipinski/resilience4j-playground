@@ -3,6 +3,7 @@ package io.github.hlipinski.rest
 import io.github.resilience4j.circuitbreaker.CallNotPermittedException
 import io.github.resilience4j.circuitbreaker.CircuitBreaker
 import io.github.resilience4j.decorators.Decorators
+import io.github.resilience4j.retry.Retry
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.http.ResponseEntity
@@ -16,7 +17,8 @@ import java.util.function.Supplier
 @RequestMapping(produces = ["application/json"])
 class ClientController(
     private val simpleAppClient: SimpleAppClient,
-    private val circuitBreaker: CircuitBreaker
+    private val circuitBreaker: CircuitBreaker,
+    private val retry: Retry
 ) {
 
     var logger: Logger = LoggerFactory.getLogger(ClientController::class.java)
@@ -31,8 +33,22 @@ class ClientController(
 
         kotlin.runCatching { decoratedSupplier.get() }
             .onSuccess { return ResponseEntity.ok(it) }
-            .onFailure { logger.error(it.message) }
+            .onFailure { logger.error("${it.javaClass} ${it.message}") }
 
-        return ResponseEntity.noContent().build()
+        return ResponseEntity.ok().build()
+    }
+
+    @GetMapping("/retry")
+    fun getWithRetry(): ResponseEntity<String> {
+        val decoratedSupplier = Retry.decorateSupplier(retry) { simpleAppClient.get503() }
+
+        kotlin.runCatching { decoratedSupplier.get() }
+            .onSuccess { return ResponseEntity.ok(it) }
+            .onFailure {
+                logger.error("${it.javaClass} ${it.message}")
+                return ResponseEntity.ok(it.message)
+            }
+
+        return ResponseEntity.ok().build()
     }
 }
