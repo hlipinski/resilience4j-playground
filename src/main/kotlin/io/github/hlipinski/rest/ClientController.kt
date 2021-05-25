@@ -6,12 +6,14 @@ import io.github.resilience4j.circuitbreaker.CircuitBreaker
 import io.github.resilience4j.decorators.Decorators
 import io.github.resilience4j.ratelimiter.RateLimiter
 import io.github.resilience4j.retry.Retry
+import io.github.resilience4j.timelimiter.TimeLimiter
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
+import java.util.concurrent.CompletableFuture
 import java.util.function.Supplier
 
 
@@ -22,7 +24,8 @@ class ClientController(
     private val circuitBreaker: CircuitBreaker,
     private val retry: Retry,
     private val rateLimiter: RateLimiter,
-    private val bulkhead: Bulkhead
+    private val bulkhead: Bulkhead,
+    private val timeLimiter: TimeLimiter
 ) {
 
     var logger: Logger = LoggerFactory.getLogger(ClientController::class.java)
@@ -68,5 +71,14 @@ class ClientController(
         val decoratedSupplier = Bulkhead.decorateSupplier(bulkhead) { simpleAppClient.getSleep() }
 
         return ResponseEntity.ok(decoratedSupplier.get())
+    }
+
+    @GetMapping("/timeLimiter")
+    fun getWithTimeLimiter(): ResponseEntity<String> {
+        val decoratedSupplier = TimeLimiter.decorateFutureSupplier(timeLimiter) {
+            CompletableFuture.supplyAsync() { simpleAppClient.getSleep() }
+        }
+
+        return ResponseEntity.ok(decoratedSupplier.call())
     }
 }
