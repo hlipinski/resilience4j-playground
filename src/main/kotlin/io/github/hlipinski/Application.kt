@@ -13,6 +13,9 @@ import io.github.resilience4j.ratelimiter.RateLimiterRegistry
 import io.github.resilience4j.retry.Retry
 import io.github.resilience4j.retry.RetryConfig
 import io.github.resilience4j.retry.RetryRegistry
+import io.github.resilience4j.timelimiter.TimeLimiter
+import io.github.resilience4j.timelimiter.TimeLimiterConfig
+import io.github.resilience4j.timelimiter.TimeLimiterRegistry
 import org.springframework.boot.autoconfigure.SpringBootApplication
 import org.springframework.boot.runApplication
 import org.springframework.boot.web.client.RestTemplateBuilder
@@ -84,6 +87,17 @@ class Application {
         )
 
         return registry.bulkhead("clientController")
+    }
+
+    @Bean
+    fun timeLimiter(): TimeLimiter {
+        val registry = TimeLimiterRegistry.of(
+            TimeLimiterConfig.custom()
+                .timeoutDuration(Duration.ofSeconds(2))
+                .build()
+        )
+
+        return registry.timeLimiter("clientController")
     }
 
     @Bean
