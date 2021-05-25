@@ -4,6 +4,9 @@ import io.github.resilience4j.circuitbreaker.CircuitBreaker
 import io.github.resilience4j.circuitbreaker.CircuitBreakerConfig
 import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry
 import io.github.resilience4j.core.IntervalFunction
+import io.github.resilience4j.ratelimiter.RateLimiter
+import io.github.resilience4j.ratelimiter.RateLimiterConfig
+import io.github.resilience4j.ratelimiter.RateLimiterRegistry
 import io.github.resilience4j.retry.Retry
 import io.github.resilience4j.retry.RetryConfig
 import io.github.resilience4j.retry.RetryRegistry
@@ -52,6 +55,19 @@ class Application {
         )
 
         return retryRegistry.retry("clientController")
+    }
+
+    @Bean
+    fun rateLimiter(): RateLimiter {
+        val registry = RateLimiterRegistry.of(
+            RateLimiterConfig.custom()
+                .limitForPeriod(2)
+                .limitRefreshPeriod(Duration.ofSeconds(2))
+                .timeoutDuration(Duration.ofSeconds(2))
+                .build()
+        )
+
+        return registry.rateLimiter("clientController")
     }
 
     @Bean
