@@ -3,6 +3,7 @@ package io.github.hlipinski.rest
 import io.github.resilience4j.circuitbreaker.CallNotPermittedException
 import io.github.resilience4j.circuitbreaker.CircuitBreaker
 import io.github.resilience4j.decorators.Decorators
+import io.github.resilience4j.ratelimiter.RateLimiter
 import io.github.resilience4j.retry.Retry
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -18,7 +19,8 @@ import java.util.function.Supplier
 class ClientController(
     private val simpleAppClient: SimpleAppClient,
     private val circuitBreaker: CircuitBreaker,
-    private val retry: Retry
+    private val retry: Retry,
+    private val rateLimiter: RateLimiter
 ) {
 
     var logger: Logger = LoggerFactory.getLogger(ClientController::class.java)
@@ -50,5 +52,12 @@ class ClientController(
             }
 
         return ResponseEntity.ok().build()
+    }
+
+    @GetMapping("/rateLimiter")
+    fun getWithRateLimit(): ResponseEntity<String> {
+        val decoratedSupplier = RateLimiter.decorateSupplier(rateLimiter) { simpleAppClient.getRegular() }
+
+        return ResponseEntity.ok(decoratedSupplier.get())
     }
 }
