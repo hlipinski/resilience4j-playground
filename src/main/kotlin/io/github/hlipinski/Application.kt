@@ -1,5 +1,8 @@
 package io.github.hlipinski
 
+import io.github.resilience4j.bulkhead.Bulkhead
+import io.github.resilience4j.bulkhead.BulkheadConfig
+import io.github.resilience4j.bulkhead.BulkheadRegistry
 import io.github.resilience4j.circuitbreaker.CircuitBreaker
 import io.github.resilience4j.circuitbreaker.CircuitBreakerConfig
 import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry
@@ -68,6 +71,19 @@ class Application {
         )
 
         return registry.rateLimiter("clientController")
+    }
+
+    @Bean
+    fun bulkhead(): Bulkhead {
+        val registry = BulkheadRegistry.of(
+            BulkheadConfig.custom()
+                .maxConcurrentCalls(2)
+                .maxWaitDuration(Duration.ofSeconds(10))
+                .writableStackTraceEnabled(false)
+                .build()
+        )
+
+        return registry.bulkhead("clientController")
     }
 
     @Bean
